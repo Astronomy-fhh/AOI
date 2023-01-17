@@ -1,9 +1,13 @@
 package quadtree
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestA(t *testing.T) {
-	aoi := NewAOI()
-	aoi.toSplit()
-	println(1)
+
+}
+
+func TestFyne(t *testing.T) {
+
 }
