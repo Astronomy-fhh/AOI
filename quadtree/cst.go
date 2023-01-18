@@ -2,16 +2,17 @@ package quadtree
 
 import (
 	"AOI/kit"
+	"AOI/player"
 	"math/rand"
 	"sync"
 	"time"
 )
 
 const MapX = 1024
-const MapY = 1024
-const MaxSize = 1
-const MaxSplit = 4
-
+const MapY = 512
+const MaxSize = 16
+const MaxSplit = 8
+const MaxItem = 100
 
 var AOI *quadTree
 
@@ -25,16 +26,21 @@ func StartEnterTest()  {
 	go func() {
 		var uid = 0
 		for  {
-			time.Sleep(time.Second/10)
+			time.Sleep(time.Second/100)
 			x := rand.Int31n(MapX)
 			y := rand.Int31n(MapY)
 			uid ++
-			AOI.Enter(&Item{uid, int(x), int(y)})
+			if uid > MaxItem {
+				break
+			}
+			p := player.NewPlayer(uid, float64(x), float64(y))
+			AOI.Enter(p)
+			kit.DrawCon.RegisterPlayer(p)
 		}
 	}()
 }
 
-func NewQuadTreeOpts(maxSize, maxSplit, maxX, maxY int)*quadTreeOpts {
+func NewQuadTreeOpts(maxSize, maxSplit int , maxX, maxY float64)*quadTreeOpts {
 	opts := &quadTreeOpts{
 		MaxSize: maxSize,
 		MaxSplit: maxSplit,
@@ -47,13 +53,13 @@ func NewQuadTreeOpts(maxSize, maxSplit, maxX, maxY int)*quadTreeOpts {
 type quadTreeOpts struct {
 	MaxSize int
 	MaxSplit int
-	MaxX int
-	MaxY int
+	MaxX float64
+	MaxY float64
 }
 
 func NewQuadTree(opts *quadTreeOpts) *quadTree {
 	qt := &quadTree{
-		items:  make(map[int]*Item),
+		items:  make(map[int]*player.Player),
 		startX: 0,
 		endX:   opts.MaxX,
 		startY: 0,
@@ -68,38 +74,32 @@ type quadTree struct {
 	*quadTreeOpts
 	depth     int
 	size      int
-	items     map[int]*Item
-	startX    int
-	endX      int
-	startY    int
-	endY      int
+	items     map[int]*player.Player
+	startX    float64
+	endX      float64
+	startY    float64
+	endY      float64
 	leftUp    *quadTree
 	leftDown  *quadTree
 	rightUp   *quadTree
 	rightDown *quadTree
 }
 
-type Item struct {
-	id int
-	x  int
-	y  int
-}
-
-func (q *quadTree) Enter(item *Item) {
+func (q *quadTree) Enter(item *player.Player) {
 	q.Add(item)
 	println("进入+1")
 }
 
-func (q *quadTree) Leave(item *Item) {
+func (q *quadTree) Leave(item *player.Player) {
 	q.Del(item)
 }
 
-func (q *quadTree) Get(startX, startY, endX, endY int) {
+func (q *quadTree) Get(startX, startY, endX, endY float64) {
 	q.Range(startX, startY, endX, endY)
 }
 
 
-func (q *quadTree) Add(item *Item) {
+func (q *quadTree) Add(item *player.Player) {
 	q.Lock()
 	defer q.Unlock()
 
@@ -114,32 +114,32 @@ func (q *quadTree) Add(item *Item) {
 			q.addToChild(item)
 		} else {
 			// 自己加
-			q.items[item.id] = item
+			q.items[item.Id] = item
 		}
 	}
 }
 
-func (q *quadTree) Del(item *Item) {
+func (q *quadTree) Del(p *player.Player) {
 	q.Lock()
 	defer q.Unlock()
 
 	q.size--
 	if q.isSplit() {
-		q.getOpNode(item.x, item.y).Del(item)
+		q.getOpNode(p.X, p.Y).Del(p)
 	} else {
-		delete(q.items, item.id)
+		delete(q.items, p.Id)
 	}
 }
 
-func (q *quadTree) Range(startX, startY, endX, endY int)[]*Item {
+func (q *quadTree) Range(startX, startY, endX, endY float64)[]*player.Player {
 	q.Lock()
 	defer q.Unlock()
-	res := make([]*Item, 0)
+	res := make([]*player.Player, 0)
 	q.RangeRecursive(startX, startY, endX, endY, res)
 	return res
 }
 
-func (q *quadTree) RangeRecursive(startX, startY, endX, endY int, found []*Item) {
+func (q *quadTree) RangeRecursive(startX, startY, endX, endY float64, found []*player.Player) {
 	if !q.collision(startX, startY, endX, endY) {
 		return
 	}
@@ -153,26 +153,26 @@ func (q *quadTree) RangeRecursive(startX, startY, endX, endY int, found []*Item)
 	}
 }
 
-func (q *quadTree) RangeItems(startX, startY, endX, endY int, found []*Item){
+func (q *quadTree) RangeItems(startX, startY, endX, endY float64, found []*player.Player){
 	q.Lock()
 	defer q.Unlock()
 
 	for _, item := range q.items {
-		if item.x >= startX && item.x <= endX && item.y >= startY && item.y <= endY {
+		if item.X >= startX && item.X <= endX && item.Y >= startY && item.Y <= endY {
 			found = append(found, item)
 		}
 	}
 }
 
-func (q *quadTree) collision(startX, startY, endX, endY int)bool  {
+func (q *quadTree) collision(startX, startY, endX, endY float64)bool  {
 	return !(q.endX < startX || q.startX > endX || q.endY < startY || q.startY > endY)
 }
 
-func (q *quadTree) addToChild(item *Item) {
-	q.getOpNode(item.x, item.y).Add(item)
+func (q *quadTree) addToChild(p *player.Player) {
+	q.getOpNode(p.X, p.Y).Add(p)
 }
 
-func (q *quadTree) getOpNode(x,y int)*quadTree {
+func (q *quadTree) getOpNode(x,y float64)*quadTree {
 	if x >= q.leftUp.endX {
 		if y >= q.leftUp.endY {
 			return q.rightDown
@@ -197,7 +197,7 @@ func (q *quadTree) canSplit() bool {
 
 func (q *quadTree) newChild() *quadTree {
 	return &quadTree{
-		items: make(map[int]*Item),
+		items: make(map[int]*player.Player),
 		depth: q.depth + 1,
 		quadTreeOpts: q.quadTreeOpts,
 	}
@@ -240,7 +240,7 @@ func (q *quadTree) toSplit() {
 	for _, item := range q.items {
 		q.addToChild(item)
 	}
-	q.items = make(map[int]*Item)
+	q.items = make(map[int]*player.Player)
 
 	println("分裂")
 }

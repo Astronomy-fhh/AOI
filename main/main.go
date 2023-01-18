@@ -12,8 +12,9 @@ func main() {
 
 	quadtree.Start()
 	quadtree.StartEnterTest()
-
+	//kit.TestPlayer(2)
 	kit.CvsStart()
+
 
 	chSignal := make(chan os.Signal, 1)
 	signal.Notify(chSignal, syscall.SIGINT, syscall.SIGTERM)

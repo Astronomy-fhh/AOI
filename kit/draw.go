@@ -1,12 +1,12 @@
 package kit
 
 import (
+	"AOI/player"
 	"github.com/tfriedel6/canvas"
 	"github.com/tfriedel6/canvas/sdlcanvas"
 	"image/color"
-	"math/rand"
+	"math"
 	"sync"
-	"time"
 )
 
 var DrawCon *DrawContainer
@@ -14,13 +14,14 @@ var DrawCon *DrawContainer
 type DrawContainer struct {
 	sync.RWMutex
 	scopes []*rect
+	players []*player.Player
 	window *sdlcanvas.Window
 	canvas *canvas.Canvas
 	frameFunc func()
 }
 
 const canvasX = 1024
-const canvasY = 1024
+const canvasY = 512
 
 func init() {
 	window, cvs, err := sdlcanvas.CreateWindow(canvasX, canvasY, "AOI")
@@ -30,6 +31,7 @@ func init() {
 
 	DrawCon = &DrawContainer{
 		scopes: make([]*rect, 0),
+		players: make([]*player.Player, 0),
 		window: window,
 		canvas: cvs,
 	}
@@ -45,8 +47,18 @@ func init() {
 
 		cvs.SetStrokeStyle(color.RGBA{R: 0, G: 0, B: 0, A: 255})
 		for _, scope := range DrawCon.scopes {
-			cvs.StrokeRect(float64(scope.x), float64(scope.y), float64(scope.w), float64(scope.h))
+			cvs.StrokeRect(scope.x, scope.y, scope.w, scope.h)
 		}
+
+		cvs.SetFillStyle("#DA49D3")
+		for _, p := range DrawCon.players {
+			p.RLock()
+			cvs.BeginPath()
+			cvs.Arc(p.X, p.Y, 10, 0, math.Pi*2, false)
+			cvs.Fill()
+			p.RUnlock()
+		}
+
 		DrawCon.RUnlock()
 	}
 }
@@ -56,39 +68,28 @@ func CvsStart() {
 	DrawCon.window.MainLoop(DrawCon.frameFunc)
 }
 
-func newRect(x, y, w, h int) *rect {
+func newRect(x, y, w, h float64) *rect {
 	return &rect{x, y, w, h}
 }
 
 type rect struct {
-	x int
-	y int
-	w int
-	h int
+	x float64
+	y float64
+	w float64
+	h float64
 }
 
-func test() {
-	for {
-		time.Sleep(time.Second)
-		sx := rand.Int31n(500)
-		sy := rand.Int31n(500)
-		ex := sx + rand.Int31n(500)
-		ey := sy + rand.Int31n(500)
-		CvsAddScope(int(sx), int(sy), int(ex), int(ey))
-	}
-}
-
-func (c *DrawContainer)AddScope(startX, startY, endX, endY int) {
-	DrawCon.Lock()
-	defer DrawCon.Unlock()
+func (c *DrawContainer)AddScope(startX, startY, endX, endY float64) {
+	c.Lock()
+	defer c.Unlock()
 	rect := newRect(startX, startY, endX-startX, endY-startY)
 	c.scopes = append(c.scopes, rect)
 }
 
 
-func CvsAddScope(startX, startY, endX, endY int) {
-	DrawCon.Lock()
-	defer DrawCon.Unlock()
-	rect := newRect(startX, startY, endX-startX, endY-startY)
-	DrawCon.scopes = append(DrawCon.scopes, rect)
+func (c *DrawContainer)RegisterPlayer(p *player.Player) {
+	c.Lock()
+	defer c.Unlock()
+	c.players = append(c.players, p)
 }
+
