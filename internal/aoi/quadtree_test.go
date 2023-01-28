@@ -1,4 +1,4 @@
-package quadtree
+package aoi
 
 import (
 	"testing"
