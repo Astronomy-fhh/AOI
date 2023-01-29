@@ -1,4 +1,4 @@
-package player
+package aoi
 
 import (
 	"AOI/internal/g"
@@ -21,9 +21,9 @@ func NewPlayer(id int, x, y float64) *Player {
 
 type Player struct {
 	sync.RWMutex
-	Id       int
-	X        float64
-	Y        float64
+	Id int
+	X  float64
+	Y  float64
 	*moveAttr
 }
 
@@ -47,15 +47,19 @@ type moveAttr struct {
 }
 
 func (p *Player) move() {
+	if !g.PlayerMove {
+		return
+	}
 	for {
 		time.Sleep(g.PlayerMoveInternal)
 		p.Lock()
+		//ox, oy := p.X, p.Y
 		t := newMoment()
 		p.collision()
-
 		p.X += p.xSpeed * float64(t-p.moveTime)
 		p.Y += p.ySpeed * float64(t-p.moveTime)
 		p.moveTime = t
+		//QTree.PlayerMove(ox, oy, p)
 		p.Unlock()
 	}
 }
@@ -82,7 +86,7 @@ func (p *Player) collision() {
 	if p.X < g.PlayerRadius {
 		p.changeColXSpeed()
 		p.X = g.PlayerRadius
-	} else if p.X > float64(g.MapX) -g.PlayerRadius {
+	} else if p.X > float64(g.MapX)-g.PlayerRadius {
 		p.changeColXSpeed()
 		p.X = float64(g.MapX) - g.PlayerRadius
 	}
@@ -90,7 +94,7 @@ func (p *Player) collision() {
 	if p.Y < g.PlayerRadius {
 		p.changeColYSpeed()
 		p.Y = g.PlayerRadius
-	} else if p.Y > float64(g.MapY) -g.PlayerRadius {
+	} else if p.Y > float64(g.MapY)-g.PlayerRadius {
 		p.changeColYSpeed()
 		p.Y = float64(g.MapY) - g.PlayerRadius
 	}
@@ -101,5 +105,5 @@ func newMoment() int64 {
 }
 
 func randSpeed() float64 {
-	return float64(rand.Intn(g.PlayerSpeedRandFactor)+ 1) * g.PlayerBaseSpeed
+	return float64(rand.Intn(g.PlayerSpeedRandFactor)+1) * g.PlayerBaseSpeed
 }

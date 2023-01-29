@@ -2,7 +2,6 @@ package main
 
 import (
 	quadtree2 "AOI/internal/aoi"
-	kit2 "AOI/internal/view"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,7 +12,7 @@ func main() {
 	quadtree2.Start()
 	quadtree2.StartEnterTest()
 	//kit.TestPlayer(2)
-	kit2.CvsStart()
+	quadtree2.CvsStart()
 
 
 	chSignal := make(chan os.Signal, 1)
